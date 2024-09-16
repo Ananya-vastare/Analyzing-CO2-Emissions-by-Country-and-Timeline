@@ -1,0 +1,164 @@
+import matplotlib.pyplot as plt
+
+
+def extract_data(countries, emission_dict):
+    if len(countries) > 3:
+        print("ERR: Sorry, at most 3 countries can be entered.")
+        return False
+
+    for country in countries:
+        if country not in emission_dict:
+            print(f"ERR: Sorry '{country}' is not a valid country.")
+            return False
+
+    # Write the selected countries' data to a new CSV file
+    header = "Country," + ",".join(list(emission_dict.values())[0]) + "\n"
+    lines = [header]
+    for country in countries:
+        lines.append(f"{country.title()},{','.join(emission_dict[country])}\n")
+
+    with open("Emissions_subset.csv", "w") as new_file:
+        new_file.writelines(lines)
+    print(
+        f"Data successfully extracted for countries: {', '.join([country.title() for country in countries])}."
+    )
+    print("Saved into file Emissions_subset.csv.\n")
+    return True
+
+
+def main():
+    print("A Simple Data Analysis Program\n")
+
+    try:
+        emission_dict = {}
+
+        # Read data from Emissions.csv
+        with open("Emissions.csv", "r") as file:
+            for line in file.read().splitlines():
+                data = line.split(",")
+                emission_dict[data[0].lower()] = data[1:]
+
+        print("All data from Emissions.csv has been read into a dictionary.\n")
+
+        while True:
+            input_year = input("Select a year to find statistics (1997 to 2010): ")
+            if not input_year.isdigit() or not 1997 <= int(input_year) <= 2010:
+                print("Sorry, that is not a valid year.")
+                continue
+            else:
+                break
+
+        # Find the index for the selected year
+        year_data = list(emission_dict.values())[0]
+        index_of_year = year_data.index(input_year)
+
+        total_emissions = 0
+        emissions_in_year = []
+        valid_countries = {}
+
+        for country, value in emission_dict.items():
+            if (
+                len(value) > index_of_year and country != "co2 per capita"
+            ):  # Exclude non-country entries
+                emission_value = float(value[index_of_year])
+                total_emissions += emission_value
+                emissions_in_year.append(emission_value)
+                valid_countries[country] = emission_value
+
+        # Calculate statistics
+        if emissions_in_year:
+            max_emission = max(emissions_in_year)
+            min_emission = min(emissions_in_year)
+            average_emissions = total_emissions / len(emissions_in_year)
+
+            max_country = [
+                country
+                for country, emission in valid_countries.items()
+                if emission == max_emission
+            ][0]
+            min_country = [
+                country
+                for country, emission in valid_countries.items()
+                if emission == min_emission
+            ][0]
+
+            print(
+                f"In {input_year}, countries with minimum and maximum CO2 emission levels were: [{min_country.title()}] "
+                f"and [{max_country.title()}] respectively."
+            )
+            print(
+                f'Average CO2 emissions in {input_year} were {"%.6f" % average_emissions}\n'
+            )
+
+        while True:
+            visualize_country = input("Select the country to visualize: ").lower()
+            if visualize_country in emission_dict:
+                plt.plot(
+                    list(map(float, year_data)),
+                    list(map(float, emission_dict[visualize_country])),
+                )
+                plt.title(f"Year vs Emissions in {visualize_country.title()}")
+                plt.xlabel("Year")
+                plt.ylabel("Emissions")
+                plt.show()
+                print()
+                break
+            else:
+                print("Sorry, that is not a valid country.")
+                continue
+
+        while True:
+            try:
+                countries = [
+                    country.strip().lower()
+                    for country in input(
+                        "Write two comma-separated countries for which you want to visualize data: "
+                    ).split(",")
+                ]
+                if len(countries) != 2:
+                    print("Please enter exactly two countries.")
+                    continue
+            except ValueError:
+                print(
+                    "Please write up to two comma-separated countries for which you want to visualize data..."
+                )
+                continue
+
+            if all(country in emission_dict for country in countries):
+                for country in countries:
+                    plt.plot(
+                        list(map(float, year_data)),
+                        list(map(float, emission_dict[country])),
+                        label=country.title(),
+                    )
+                plt.title("Year vs Emissions in Capita")
+                plt.xlabel("Year")
+                plt.ylabel("Emissions")
+                plt.legend()
+                plt.show()
+                print()
+                break
+            else:
+                print("Sorry, one or both of the countries are not valid.")
+                continue
+
+        while True:
+            input_string = input(
+                "Write up to three comma-separated countries for which you want to extract data: "
+            ).lower()
+            countries = [country.strip() for country in input_string.split(",")]
+            if extract_data(countries, emission_dict):
+                break
+
+    except FileNotFoundError:
+        print(
+            "File not found. Please ensure that 'Emissions.csv' is in the correct directory."
+        )
+    except IOError:
+        print("Output file can't be saved.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+
+if __name__ == "__main__":
+    main()
